@@ -7,7 +7,7 @@ import { ILogger } from "./Models/ILogger";
 
 export class StackBuilder {
     public logger: ILogger = new BypassLogger();
-    public dispose() {
+    public dispose(): void {
         this.logger.trace("Starting to dispose StackBuilder.");
         for (const api of this.apis) {
             api.dispose();
@@ -16,9 +16,17 @@ export class StackBuilder {
         this.logger.trace("Disposing StackBuilder finished.");
     }
     protected apis: Array<IApi<IContext>> = [];
-    public addApi(api: IApi<IContext>) {
+    public getApis = () => [...this.apis];
+    public addApi(api: (builder: this) => IApi<IContext>): this {
+        this.apis.push(api(this));
         return this;
     }
 
-    constructor(protected server: Server) { }
+    public getServer = () => this.server;
+
+    public async start() {
+        await Promise.all([...this.apis.map((a) => a.activate())]);
+    }
+
+    constructor(protected readonly server: Server) { }
 }
